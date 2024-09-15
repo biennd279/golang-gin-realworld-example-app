@@ -3,6 +3,7 @@ module github.com/gothinkster/golang-gin-realworld-example-app
 go 1.15
 
 require (
+	github.com/cucumber/godog v0.14.1
 	github.com/denisenkom/go-mssqldb v0.9.0 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gin-gonic/gin v1.8.1

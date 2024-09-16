@@ -2,6 +2,7 @@
 package common
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
 	"time"
@@ -9,8 +10,8 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"gopkg.in/go-playground/validator.v8"
 
-	"github.com/gin-gonic/gin/binding"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 )
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
@@ -42,7 +43,8 @@ func GenToken(id uint) string {
 }
 
 // My own Error type that will help return my customized Error info
-//  {"database": {"hello":"no such table", error: "not_exists"}}
+//
+//	{"database": {"hello":"no such table", error: "not_exists"}}
 type CommonError struct {
 	Errors map[string]interface{} `json:"errors"`
 }
@@ -52,7 +54,8 @@ type CommonError struct {
 func NewValidatorError(err error) CommonError {
 	res := CommonError{}
 	res.Errors = make(map[string]interface{})
-	errs := err.(validator.ValidationErrors)
+	var errs validator.ValidationErrors
+	errors.As(err, &errs)
 	for _, v := range errs {
 		// can translate each error one at a time.
 		//fmt.Println("gg",v.NameNamespace)

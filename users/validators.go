@@ -1,8 +1,8 @@
 package users
 
 import (
-	"github.com/gothinkster/golang-gin-realworld-example-app/common"
 	"github.com/gin-gonic/gin"
+	"github.com/gothinkster/golang-gin-realworld-example-app/common"
 )
 
 // *ModelValidator containing two parts:
@@ -63,8 +63,8 @@ func NewUserModelValidatorFillWith(userModel UserModel) UserModelValidator {
 
 type LoginValidator struct {
 	User struct {
-		Email    string `form:"email" json:"email" binding:"exists,email"`
-		Password string `form:"password"json:"password" binding:"exists,min=8,max=255"`
+		Email    string `form:"email" json:"email" binding:"required,email"`
+		Password string `form:"password" json:"password" binding:"required,min=8,max=255"`
 	} `json:"user"`
 	userModel UserModel `json:"-"`
 }

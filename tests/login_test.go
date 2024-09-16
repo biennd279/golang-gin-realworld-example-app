@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"github.com/cucumber/godog"
 	"github.com/gin-gonic/gin"
-	"github.com/gothinkster/golang-gin-realworld-example-app/users"
-	"golang.org/x/crypto/bcrypt"
 	"net/http/httptest"
 	"testing"
 )
@@ -42,27 +40,6 @@ func TestFeatures(t *testing.T) {
 //	return nil, godog.ErrPending
 //
 //}
-
-func iHaveAValidEmailAndPasswordIs(ctx context.Context, email string, password string) (context.Context, error) {
-
-	bytePassword := []byte(password)
-	passwordHash, _ := bcrypt.GenerateFromPassword(bytePassword, bcrypt.DefaultCost)
-
-	userModel := users.UserModel{
-		Username:     "test",
-		Email:        email,
-		PasswordHash: string(passwordHash),
-	}
-
-	users.SaveOne(&userModel)
-
-	return ctx, nil
-}
-
-func iHaveAInvalidUsernameAndPasswordIsInvalidAndInvalid(ctx context.Context) (context.Context, error) {
-	// do nothing
-	return ctx, nil
-}
 
 func iSendARequestToTheLoginApiWithValidCredentials(ctx context.Context) (context.Context, error) {
 
@@ -116,21 +93,8 @@ func theResponseShouldContainAToken(ctx context.Context) error {
 }
 
 func InitializeScenario(ctx *godog.ScenarioContext) {
-	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
-		app := &appContext{}
-		app.reset()
-		return context.WithValue(ctx, appCtxKey{}, app), nil
-	})
-
-	ctx.After(func(ctx context.Context, sc *godog.Scenario, err error) (context.Context, error) {
-		app := ctx.Value(appCtxKey{}).(*appContext)
-		app.teardown()
-		return ctx, nil
-	})
-
+	SetupDefaultApplicationScenario(ctx)
 	ctx.Step(`^the response should be a (\d+) status code$`, theResponseShouldBeAStatusCode)
 	ctx.Step(`^the response should contain a token$`, theResponseShouldContainAToken)
 	ctx.Step(`^I send a request to the login api with valid credentials$`, iSendARequestToTheLoginApiWithValidCredentials)
-	ctx.Step(`^I have a invalid username and password is "([^"]*)" and "([^"]*)"$`, iHaveAInvalidUsernameAndPasswordIsInvalidAndInvalid)
-	ctx.Step(`^I have a valid email and password is "([^"]*)" and "([^"]*)"$`, iHaveAValidEmailAndPasswordIs)
 }

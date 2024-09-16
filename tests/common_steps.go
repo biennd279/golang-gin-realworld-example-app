@@ -1,12 +1,15 @@
 package tests
 
 import (
+	"context"
 	"encoding/json"
+	"github.com/cucumber/godog"
 	"github.com/gin-gonic/gin"
 	"github.com/gothinkster/golang-gin-realworld-example-app/articles"
 	"github.com/gothinkster/golang-gin-realworld-example-app/common"
 	"github.com/gothinkster/golang-gin-realworld-example-app/users"
 	"github.com/jinzhu/gorm"
+	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -69,4 +72,61 @@ func NewJSONRequest(method string, target string, param interface{}) *http.Reque
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Accept", "application/json")
 	return req
+}
+
+func iHaveAValidEmailAndPasswordIs(ctx context.Context, email string, password string) (context.Context, error) {
+
+	bytePassword := []byte(password)
+	passwordHash, _ := bcrypt.GenerateFromPassword(bytePassword, bcrypt.DefaultCost)
+
+	userModel := users.UserModel{
+		Username:     "test",
+		Email:        email,
+		PasswordHash: string(passwordHash),
+	}
+
+	users.SaveOne(&userModel)
+
+	return ctx, nil
+}
+
+func iHaveAInvalidUsernameAndPasswordIsInvalidAndInvalid(ctx context.Context) (context.Context, error) {
+	// do nothing
+	return ctx, nil
+}
+
+func iLoginWithTheValidEmailAndPassword(ctx context.Context) (context.Context, error) {
+	return ctx, godog.ErrPending
+}
+
+func iHaveAValidToken(ctx context.Context) (context.Context, error) {
+	return ctx, godog.ErrPending
+}
+
+func SetupDefaultApplicationScenario(ctx *godog.ScenarioContext) {
+
+	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
+		app := &appContext{}
+		app.reset()
+		return context.WithValue(ctx, appCtxKey{}, app), nil
+	})
+
+	ctx.After(func(ctx context.Context, sc *godog.Scenario, err error) (context.Context, error) {
+		app := ctx.Value(appCtxKey{}).(*appContext)
+		app.teardown()
+		return ctx, nil
+	})
+
+	ctx.Step(`^I have a invalid username and password is "([^"]*)" and "([^"]*)"$`, iHaveAInvalidUsernameAndPasswordIsInvalidAndInvalid)
+	ctx.Step(`^I have a valid email and password is "([^"]*)" and "([^"]*)"$`, iHaveAValidEmailAndPasswordIs)
+	ctx.Step(`^I login with the valid email and password$`, iLoginWithTheValidEmailAndPassword)
+	ctx.Step(`^I have a valid token$`, iHaveAValidToken)
+	ctx.Step(`^I am unauthenticated with invalid token$`, iAmUnauthenticatedWithInvalidToken)
+}
+
+func iAmAuthenticatedWithValidToken(ctx context.Context, stateToken string) (context.Context, error) {
+	return ctx, nil
+}
+func iAmUnauthenticatedWithInvalidToken(ctx context.Context) (context.Context, error) {
+	return ctx, nil
 }

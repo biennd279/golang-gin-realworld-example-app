@@ -20,10 +20,13 @@ type appContext struct {
 	r  *gin.Engine
 }
 
-func (a *appContext) reset() {
-	a.r = gin.Default()
+func newAppContext() *appContext {
+	app := &appContext{}
+	app.r = gin.Default()
 
-	v1 := a.r.Group("/api")
+	gin.SetMode(gin.TestMode)
+
+	v1 := app.r.Group("/api")
 	users.UsersRegister(v1.Group("/users"))
 	v1.Use(users.AuthMiddleware(false))
 	articles.ArticlesAnonymousRegister(v1.Group("/articles"))
@@ -35,7 +38,15 @@ func (a *appContext) reset() {
 
 	articles.ArticlesRegister(v1.Group("/articles"))
 
+	app.db = common.TestDBInit()
+	app.db.LogMode(false)
+
+	return app
+}
+
+func (a *appContext) reset() {
 	a.db = common.TestDBInit()
+	a.db.LogMode(false)
 	migrateDB(a.db)
 }
 
@@ -106,7 +117,7 @@ func iHaveAValidToken(ctx context.Context) (context.Context, error) {
 func SetupDefaultApplicationScenario(ctx *godog.ScenarioContext) {
 
 	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
-		app := &appContext{}
+		app := newAppContext()
 		app.reset()
 		return context.WithValue(ctx, appCtxKey{}, app), nil
 	})

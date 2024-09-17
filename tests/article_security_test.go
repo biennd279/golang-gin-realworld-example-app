@@ -53,13 +53,16 @@ func iSendARequestToActionTheArticleApi(ctx context.Context, action string) (con
 
 	req := NewJSONRequest(method, endpoint, nil)
 
+	reqCtx := ctx.Value(tokenCtxKey{}).(tokenCtx)
+	req.Header.Add("Authorization", fmt.Sprintf("Token %s", reqCtx.token))
+
 	w := httptest.NewRecorder()
 
 	app := ctx.Value(appCtxKey{}).(*appContext)
 
 	app.r.ServeHTTP(w, req)
 
-	rsp := response{
+	rsp := responseCtx{
 		statusCode: w.Code,
 		body:       w.Body.String(),
 		headers:    w.Header(),
@@ -68,7 +71,7 @@ func iSendARequestToActionTheArticleApi(ctx context.Context, action string) (con
 	return context.WithValue(ctx, rspCtxKey{}, rsp), nil
 }
 func theresponsestatuscodeshouldbeastatusCode(ctx context.Context, statusCode int) (context.Context, error) {
-	rsp := ctx.Value(rspCtxKey{}).(response)
+	rsp := ctx.Value(rspCtxKey{}).(responseCtx)
 
 	if rsp.statusCode != statusCode {
 		return ctx, errors.New(fmt.Sprintf("expected status code %d, got %d", statusCode, rsp.statusCode))

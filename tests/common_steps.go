@@ -65,13 +65,29 @@ func (a *appContext) teardown() {
 
 type appCtxKey struct{}
 
-type response struct {
+type tokenCtx struct {
+	token string
+}
+
+type tokenCtxKey struct{}
+
+type responseCtx struct {
 	statusCode int
 	body       string
 	headers    http.Header
 }
 
 type rspCtxKey struct{}
+
+type userLoginResponse struct {
+	User struct {
+		Username string  `json:"username"`
+		Email    string  `json:"email"`
+		Bio      string  `json:"bio"`
+		Image    *string `json:"image"`
+		Token    string  `json:"token"`
+	} `json:"user"`
+}
 
 func ConvertToString(model interface{}) string {
 	bytes, _ := json.Marshal(model)
@@ -83,6 +99,16 @@ func NewJSONRequest(method string, target string, param interface{}) *http.Reque
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Accept", "application/json")
 	return req
+}
+
+func CreateLoginRequest(email string, password string) *http.Request {
+	param := gin.H{
+		"user": gin.H{
+			"email":    email,
+			"password": password,
+		},
+	}
+	return NewJSONRequest("POST", "/api/users/login", param)
 }
 
 func iHaveAValidEmailAndPasswordIs(ctx context.Context, email string, password string) (context.Context, error) {
@@ -110,10 +136,6 @@ func iLoginWithTheValidEmailAndPassword(ctx context.Context) (context.Context, e
 	return ctx, godog.ErrPending
 }
 
-func iHaveAValidToken(ctx context.Context) (context.Context, error) {
-	return ctx, godog.ErrPending
-}
-
 func SetupDefaultApplicationScenario(ctx *godog.ScenarioContext) {
 
 	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
@@ -131,13 +153,34 @@ func SetupDefaultApplicationScenario(ctx *godog.ScenarioContext) {
 	ctx.Step(`^I have a invalid username and password is "([^"]*)" and "([^"]*)"$`, iHaveAInvalidUsernameAndPasswordIsInvalidAndInvalid)
 	ctx.Step(`^I have a valid email and password is "([^"]*)" and "([^"]*)"$`, iHaveAValidEmailAndPasswordIs)
 	ctx.Step(`^I login with the valid email and password$`, iLoginWithTheValidEmailAndPassword)
-	ctx.Step(`^I have a valid token$`, iHaveAValidToken)
 	ctx.Step(`^I am unauthenticated with invalid token$`, iAmUnauthenticatedWithInvalidToken)
+	ctx.Step(`^I am authenticated with valid token$`, iAmAuthenticatedWithValidToken)
 }
 
-func iAmAuthenticatedWithValidToken(ctx context.Context, stateToken string) (context.Context, error) {
-	return ctx, nil
+func iAmAuthenticatedWithValidToken(ctx context.Context) (context.Context, error) {
+	loginReq := CreateLoginRequest("test@gmail.com", "password")
+	w := httptest.NewRecorder()
+	app := ctx.Value(appCtxKey{}).(*appContext)
+	app.r.ServeHTTP(w, loginReq)
+
+	var loginResponse userLoginResponse
+	err := json.Unmarshal(w.Body.Bytes(), &loginResponse)
+
+	if err != nil {
+		return ctx, err
+	}
+
+	reqCtx := tokenCtx{
+		token: loginResponse.User.Token,
+	}
+
+	return context.WithValue(ctx, tokenCtxKey{}, reqCtx), nil
 }
+
 func iAmUnauthenticatedWithInvalidToken(ctx context.Context) (context.Context, error) {
-	return ctx, nil
+	reqCtx := tokenCtx{
+		token: "invalid",
+	}
+
+	return context.WithValue(ctx, tokenCtxKey{}, reqCtx), nil
 }

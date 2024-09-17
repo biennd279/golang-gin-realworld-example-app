@@ -6,20 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/cucumber/godog"
-	"github.com/gin-gonic/gin"
 	"net/http/httptest"
 	"testing"
 )
-
-type userLoginResponse struct {
-	User struct {
-		Username string  `json:"username"`
-		Email    string  `json:"email"`
-		Bio      string  `json:"bio"`
-		Image    *string `json:"image"`
-		Token    string  `json:"token"`
-	} `json:"user"`
-}
 
 func TestFeatures(t *testing.T) {
 	suite := godog.TestSuite{
@@ -42,23 +31,15 @@ func TestFeatures(t *testing.T) {
 //}
 
 func iSendARequestToTheLoginApiWithValidCredentials(ctx context.Context) (context.Context, error) {
-
-	param := gin.H{
-		"user": gin.H{
-			"email":    "test@gmail.com",
-			"password": "password",
-		},
-	}
-
-	req := NewJSONRequest("POST", "/api/users/login", param)
+	loginReq := CreateLoginRequest("test@gmail.com", "password")
 
 	w := httptest.NewRecorder()
 
 	app := ctx.Value(appCtxKey{}).(*appContext)
 
-	app.r.ServeHTTP(w, req)
+	app.r.ServeHTTP(w, loginReq)
 
-	rsp := response{
+	rsp := responseCtx{
 		statusCode: w.Code,
 		body:       w.Body.String(),
 		headers:    w.Header(),
@@ -68,7 +49,7 @@ func iSendARequestToTheLoginApiWithValidCredentials(ctx context.Context) (contex
 }
 
 func theResponseShouldBeAStatusCode(ctx context.Context, arg1 int) (context.Context, error) {
-	rsp := ctx.Value(rspCtxKey{}).(response)
+	rsp := ctx.Value(rspCtxKey{}).(responseCtx)
 
 	if rsp.statusCode != arg1 {
 		return ctx, errors.New(fmt.Sprintf("expected status code %d, got %d", arg1, rsp.statusCode))
@@ -78,7 +59,7 @@ func theResponseShouldBeAStatusCode(ctx context.Context, arg1 int) (context.Cont
 }
 
 func theResponseShouldContainAToken(ctx context.Context) error {
-	rsp := ctx.Value(rspCtxKey{}).(response)
+	rsp := ctx.Value(rspCtxKey{}).(responseCtx)
 	var loginResponse userLoginResponse
 	err := json.Unmarshal([]byte(rsp.body), &loginResponse)
 	if err != nil {
@@ -86,7 +67,7 @@ func theResponseShouldContainAToken(ctx context.Context) error {
 	}
 
 	if loginResponse.User.Token == "" {
-		return errors.New("expected token in response")
+		return errors.New("expected token in responseCtx")
 	}
 
 	return nil
